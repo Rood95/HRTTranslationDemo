@@ -49,15 +49,57 @@ function main(params) {
       // found in the catch clause below
 
       // pick the language with the highest confidence, and send it back
-      resolve({
-        statusCode: 200,
-        body: {
-          translations: "<translated text>",
-          words: 1,
-          characters: 11,
-        },
-        headers: { 'Content-Type': 'application/json' }
+
+      const languageTranslator = new LanguageTranslatorV3({
+        version: '2018-05-01',
+        authenticator: new IamAuthenticator({
+          apikey: '6EKfGnzfa0E6WiRMKEKWGxlpdwLlI1XPtDiKwC3o4IX7',
+        }),
+        url: "https://api.eu-de.language-translator.watson.cloud.ibm.com/instances/d3f7e2be-d9b0-4de6-aa0d-6fa655d350de",
       });
+      
+      const translateParams = {
+        text: params.body.text,
+        modelId: params.body.language.language + "-" + defaultLanguage,
+      };
+      if(params.body.language.language !== "en"){
+        languageTranslator.translate(translateParams)
+        .then(translationResult => {
+          console.log(JSON.stringify(translationResult, null, 2));
+          var blub;
+          if(params.body.language.confidence > 0.5){
+            blub = translationResult.result.translations[0].translations;
+          } else {
+            blub = params.body.text;
+          }
+          resolve({
+            statusCode: 200,
+            body: {
+              translations: blub,
+              words: translationResult.result.word_count,
+              characters: translationResult.result.character_count,
+            },
+            headers: { 'Content-Type': 'application/json' }
+          });
+        })
+        .catch(err => {
+          console.log('error:', err);
+        });
+      } else {
+        resolve({
+          statusCode: 200,
+          body: {
+            translations: params.body.text,
+            words: 5,
+            characters: 5,
+          },
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      
+
+      
          
     } catch (err) {
       console.error('Error while initializing the AI service', err);
